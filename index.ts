@@ -19,7 +19,6 @@ interface PreferenceConfig {
   tools: PreferenceEntry[];
 }
 
-const MESSAGE_TYPE = "pi-preferred-shell-tools";
 const SETTINGS_KEY = "preferredShellTools";
 const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 const DEFAULT_PREFERENCES: readonly Preference[] = [
@@ -99,39 +98,45 @@ async function isAvailable(pi: ExtensionAPI, command: string): Promise<boolean> 
   }
 }
 
+function addPreferencesToPrompt(systemPrompt: string, preferences: Preference[]): string {
+  const instructions = preferences.map(({ instruction }) => instruction).join(" ");
+  const bashLine = /^(\s*-\s*bash:\s*).*$/m;
+
+  if (bashLine.test(systemPrompt)) {
+    return systemPrompt.replace(
+      bashLine,
+      (line) => `${line} Preferences from pi-preferred-shell-tools: ${instructions}`,
+    );
+  }
+
+  return `${systemPrompt}\n\n<shell_preferences source="pi-preferred-shell-tools">\n${preferences
+    .map(({ instruction }) => `- ${instruction}`)
+    .join("\n")}\n</shell_preferences>`;
+}
+
 export default function (pi: ExtensionAPI) {
-  let checked = false;
   let preferences: Preference[] = [...DEFAULT_PREFERENCES];
+  let availablePreferences: Preference[] | undefined;
 
   pi.on("session_start", (_event, ctx) => {
     preferences = resolvePreferences(ctx.cwd);
-    checked = ctx.sessionManager
-      .getBranch()
-      .some((entry) => entry.type === "custom_message" && entry.customType === MESSAGE_TYPE);
+    availablePreferences = undefined;
   });
 
-  pi.on("before_agent_start", async () => {
-    if (checked) return;
-    checked = true;
-
-    const available = (await Promise.all(
+  pi.on("before_agent_start", async (event) => {
+    availablePreferences ??= (await Promise.all(
       preferences.map(async (preference) => ({
         ...preference,
         available: await isAvailable(pi, preference.command),
       })),
-    )).filter((preference) => preference.available);
+    ))
+      .filter((preference) => preference.available)
+      .map(({ command, instruction }) => ({ command, instruction }));
 
-    if (available.length === 0) return;
+    if (availablePreferences.length === 0) return;
 
     return {
-      message: {
-        customType: MESSAGE_TYPE,
-        content: `<shell_preferences>\n${available
-          .map(({ instruction }) => `- ${instruction}`)
-          .join("\n")}\n</shell_preferences>`,
-        display: false,
-        details: { commands: available.map(({ command }) => command) },
-      },
+      systemPrompt: addPreferencesToPrompt(event.systemPrompt, availablePreferences),
     };
   });
 }

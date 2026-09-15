@@ -1,6 +1,6 @@
 {
   "name": "pi-preferred-shell-tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Configurable Pi extension that prefers modern shell tools when they are available.",
   "license": "MIT",
   "author": {

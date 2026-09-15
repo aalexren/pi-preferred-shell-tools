@@ -16,7 +16,7 @@ Its built-in preferences are:
 - [`eza`](https://github.com/eza-community/eza) instead of `ls`
 - [`fd`](https://github.com/sharkdp/fd) instead of `find`
 
-The extension checks the current environment once per session and adds only preferences whose commands are available. It does not replace Pi's built-in tools or require any preferred command to be installed.
+The extension checks the current environment once per session and appends the available preferences to Pi's existing `bash` entry in the system prompt. It does not replace Pi's built-in tools or require any preferred command to be installed.
 
 ## Install
 
