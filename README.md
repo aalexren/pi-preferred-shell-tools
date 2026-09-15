@@ -1,12 +1,20 @@
 # pi-preferred-shell-tools
 
+[![npm version](https://img.shields.io/npm/v/pi-preferred-shell-tools?logo=npm)](https://www.npmjs.com/package/pi-preferred-shell-tools)
+[![npm license](https://img.shields.io/npm/l/pi-preferred-shell-tools)](./LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/pi-preferred-shell-tools)](https://www.npmjs.com/package/pi-preferred-shell-tools)
+[![GitHub Actions](https://github.com/aalexren/pi-preferred-shell-tools/actions/workflows/publish.yml/badge.svg)](https://github.com/aalexren/pi-preferred-shell-tools/actions/workflows/publish.yml)
+[![GitHub release](https://img.shields.io/github/v/release/aalexren/pi-preferred-shell-tools?logo=github)](https://github.com/aalexren/pi-preferred-shell-tools/releases)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/aalexren/pi-preferred-shell-tools?logo=github)](https://github.com/aalexren/pi-preferred-shell-tools)
+[![GitHub top language](https://img.shields.io/github/languages/top/aalexren/pi-preferred-shell-tools?logo=typescript)](https://github.com/aalexren/pi-preferred-shell-tools)
+
 A small [Pi](https://pi.dev) extension that tells the model to prefer modern command-line tools when they are installed.
 
 Its built-in preferences are:
 
-- `rg` instead of `grep`
-- `eza` instead of `ls`
-- `fd` instead of `find`
+- [`rg`](https://github.com/burntsushi/ripgrep) instead of `grep`
+- [`eza`](https://github.com/eza-community/eza) instead of `ls`
+- [`fd`](https://github.com/sharkdp/fd) instead of `find`
 
 The extension checks the current environment once per session and adds only preferences whose commands are available. It does not replace Pi's built-in tools or require any preferred command to be installed.
 
@@ -72,22 +80,6 @@ To start without any built-in preferences and provide only your own:
 ```
 
 The original array form remains supported and adds entries to the defaults. Project settings in `<project>/.pi/settings.json` work too; project options and entries override matching global values. Settings are read when a session starts.
-
-## Development
-
-```bash
-npm install
-npm run check
-```
-
-## Publish
-
-This is an unscoped package in npm's public registry. Authenticate before publishing:
-
-```bash
-npm login
-npm publish --access public
-```
 
 ## License
 
