@@ -20,6 +20,7 @@ interface PreferenceConfig {
 }
 
 const SETTINGS_KEY = "preferredShellTools";
+const PROMPT_SECTION = "pi_preferred_shell_tools";
 const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 const DEFAULT_PREFERENCES: readonly Preference[] = [
   { command: "rg", instruction: "Use `rg` instead of `grep` for text search." },
@@ -98,20 +99,19 @@ async function isAvailable(pi: ExtensionAPI, command: string): Promise<boolean> 
   }
 }
 
-function addPreferencesToPrompt(systemPrompt: string, preferences: Preference[]): string {
-  const instructions = preferences.map(({ instruction }) => instruction).join(" ");
-  const bashLine = /^(\s*-\s*bash:\s*).*$/m;
-
-  if (bashLine.test(systemPrompt)) {
-    return systemPrompt.replace(
-      bashLine,
-      (line) => `${line} Preferences from pi-preferred-shell-tools: ${instructions}`,
-    );
+function updatePromptSection(
+  sections: Record<string, string>,
+  preferences: Preference[],
+): void {
+  if (preferences.length === 0) {
+    delete sections[PROMPT_SECTION];
+    return;
   }
 
-  return `${systemPrompt}\n\n<shell_preferences source="pi-preferred-shell-tools">\n${preferences
-    .map(({ instruction }) => `- ${instruction}`)
-    .join("\n")}\n</shell_preferences>`;
+  sections[PROMPT_SECTION] = [
+    "Preferences from pi-preferred-shell-tools:",
+    ...preferences.map(({ instruction }) => `- ${instruction}`),
+  ].join("\n");
 }
 
 export default function (pi: ExtensionAPI) {
@@ -133,10 +133,6 @@ export default function (pi: ExtensionAPI) {
       .filter((preference) => preference.available)
       .map(({ command, instruction }) => ({ command, instruction }));
 
-    if (availablePreferences.length === 0) return;
-
-    return {
-      systemPrompt: addPreferencesToPrompt(event.systemPrompt, availablePreferences),
-    };
+    updatePromptSection(event.systemPromptOptions.sections, availablePreferences);
   });
 }
