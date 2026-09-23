@@ -18,6 +18,8 @@ Its built-in preferences are:
 
 The extension checks the current environment once per session and adds the available preferences to a dedicated structured section in Pi's system prompt. It does not replace Pi's built-in tools or require any preferred command to be installed.
 
+Run `/preferred-shell-tools` to inspect the exact section that will be injected and whether it is already in the current model context. It is a human slash command, not a model tool: Pi handles it locally and does not add it to the conversation or consume context tokens.
+
 ## Install
 
 ```bash

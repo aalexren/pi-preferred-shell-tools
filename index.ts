@@ -99,6 +99,13 @@ async function isAvailable(pi: ExtensionAPI, command: string): Promise<boolean> 
   }
 }
 
+function renderSectionBody(preferences: readonly Preference[]): string {
+  return [
+    "Preferences from pi-preferred-shell-tools:",
+    ...preferences.map(({ instruction }) => `- ${instruction}`),
+  ].join("\n");
+}
+
 function updatePromptSection(
   sections: Record<string, string>,
   preferences: Preference[],
@@ -108,9 +115,51 @@ function updatePromptSection(
     return;
   }
 
-  sections[PROMPT_SECTION] = [
-    "Preferences from pi-preferred-shell-tools:",
-    ...preferences.map(({ instruction }) => `- ${instruction}`),
+  sections[PROMPT_SECTION] = renderSectionBody(preferences);
+}
+
+function sectionIsInModelContext(sessionManager: {
+  buildSessionProjection(): {
+    messages: readonly {
+      role: string;
+      sections?: Record<string, string | null>;
+    }[];
+  };
+}): boolean {
+  return sessionManager.buildSessionProjection().messages.some(
+    (message) =>
+      message.role === "system" && typeof message.sections?.[PROMPT_SECTION] === "string",
+  );
+}
+
+function renderInspection(
+  checked: readonly (Preference & { available: boolean })[],
+  inModelContext: boolean,
+): string {
+  const available = checked.filter((preference) => preference.available);
+  const section =
+    available.length === 0
+      ? "(none — no preferred commands are available)"
+      : `<${PROMPT_SECTION}>\n${renderSectionBody(available)}\n</${PROMPT_SECTION}>`;
+  const checks =
+    checked.length === 0
+      ? ["- (none configured)"]
+      : checked.map(
+          (preference) =>
+            `- ${preference.command}: ${preference.available ? "available" : "not found"}`,
+        );
+
+  return [
+    "Preferences injected by pi-preferred-shell-tools:",
+    "",
+    section,
+    "",
+    "Command checks:",
+    ...checks,
+    "",
+    inModelContext
+      ? "Current model context already contains this section."
+      : "Current model context does not contain this section yet. It is added when the next turn starts.",
   ].join("\n");
 }
 
@@ -134,5 +183,28 @@ export default function (pi: ExtensionAPI) {
       .map(({ command, instruction }) => ({ command, instruction }));
 
     updatePromptSection(event.systemPromptOptions.sections, availablePreferences);
+  });
+
+  pi.registerCommand("preferred-shell-tools", {
+    description: "Show the shell-tool preferences injected into the system prompt",
+    handler: async (_args, ctx) => {
+      preferences = resolvePreferences(ctx.cwd);
+      const checked = await Promise.all(
+        preferences.map(async (preference) => ({
+          ...preference,
+          available: await isAvailable(pi, preference.command),
+        })),
+      );
+      availablePreferences = checked
+        .filter((preference) => preference.available)
+        .map(({ command, instruction }) => ({ command, instruction }));
+
+      const report = renderInspection(checked, sectionIsInModelContext(ctx.sessionManager));
+      if (!ctx.hasUI) {
+        process.stderr.write(`${report}\n`);
+        return;
+      }
+      await ctx.ui.editor("Injected shell preferences", report);
+    },
   });
 }
